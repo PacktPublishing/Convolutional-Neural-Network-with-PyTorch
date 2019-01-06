@@ -1,9 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Sun Feb  4 17:08:31 2018
-@author: Ashish Bhatia
-"""
-
 import torch
 from torch.autograd import Variable
 import torch.nn as nn
