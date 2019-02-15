@@ -1,17 +1,13 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Sun Feb  4 17:08:31 2018
-
-@author: Ashish Bhatia
-"""
-
 import torch
 from torch.autograd import Variable
 import torch.nn as nn
 import torch.optim as optim
-
+import torch.nn.functional as F
 from torchvision.transforms import transforms
 import torchvision.datasets as datasets
+
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 train_dataset = datasets.MNIST(root='./data', train=True,
                                transform=transforms.ToTensor(),download=True)
@@ -22,6 +18,8 @@ print(train_dataset.train_labels.size())
 
 print(test_dataset.test_data.size())
 print(test_dataset.test_labels.size())
+
+
 
 # Make dataset iterable
 batch_size = 100
@@ -76,13 +74,12 @@ class CNNModel(nn.Module):
         out = out.view(out.size(0), -1)
         #Linear Function
         out = self.fc1(out)
-        
-        return out
+        #Output 
+        return F.log_softmax(out,dim=1)
 
 
-model = CNNModel()
+model = CNNModel().to(device)
 
-criterion = nn.CrossEntropyLoss() 
 learning_rate = 0.01
 optimizer= optim.SGD(model.parameters(), lr=learning_rate)    
 
@@ -90,14 +87,13 @@ optimizer= optim.SGD(model.parameters(), lr=learning_rate)
 iter = 0 
 for epoch in range(num_epochs):
     for i, (images,labels) in enumerate(train_loader):
-        #Load images in Variables
-        images = Variable(images)
-        labels = Variable(labels)
+        images = images.to(device)
+        labels = labels.to(device)
         
         optimizer.zero_grad()
         output = model(images)
         
-        loss = criterion(output, labels)
+        loss = F.nll_loss(output, labels)
         loss.backward()
         optimizer.step()
         iter = iter + 1
@@ -105,26 +101,15 @@ for epoch in range(num_epochs):
             print ('Epoch [%d/%d], Iter [%d/%d] Loss: %.4f' 
                    %(epoch+1, num_epochs, i+1, len(train_dataset)//batch_size, loss.data[0]))
 
-
-
-
-
-
-
-
-
-
-
-
-
 model.eval()
 correct=0
 total=0
 for images, labels in test_loader:
-    images = Variable(images)
+    images = images.to(device)
+    labels = labels.to(device)
     outputs = model(images)
     _, predicted = torch.max(outputs.data, 1)
     total += labels.size(0)
-    correct += (predicted == labels).sum()
+    correct += (predicted == labels).sum().item()
 
-print('Test Accuracy of the model on the 10000 test images: %d %%' % (100 * correct / total))       
+print("Test Accuracy of the model on the 10000 test images: {}".format(((100*correct)/ total))
